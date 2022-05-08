@@ -95,7 +95,7 @@ func (xmlHandler exchangeXmlHandler) inboundHandle(context *context) (int, strin
 		response: hzbankResponse,
 	}
 	context.message = requestParameter
-	log.Println("交易状态为：", hzbankResponse.Body.Status.ErrorMsg )
+	log.Println("接收到响应的报文：\n", message)
 
     return 0, ""
 }

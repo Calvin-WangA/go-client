@@ -4,9 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
-	"log"
+	"encoding/xml"
 	"io"
+	"log"
+	"net"
 	"os"
+	"time"
 )
 
 /**
@@ -33,7 +36,7 @@ func (ph packetHandler) inboundHandle(context *context) (int, string) {
 		peek, err := reader.Peek(int(ph.contentLen))
 		if err != nil {
 			log.Println("读取长度错误：", err)
-			break
+			return -1, "Peek长度错误：" + err.Error()
 		}
 
 		// 读取长度
@@ -45,7 +48,7 @@ func (ph packetHandler) inboundHandle(context *context) (int, string) {
 				continue
 			} else {
 				log.Println("读取长度出错，错误信息为：", err)
-				break
+				return -2, "读取数据长度错误：" + err.Error()
 			}
 		}
 		// 判断是否读完整，否则继续等待
@@ -59,7 +62,7 @@ func (ph packetHandler) inboundHandle(context *context) (int, string) {
 		_, err = reader.Read(data)
 		if err != nil {
 			log.Println("读取数据失败，", err)
-			break
+			return -3, "读取数据内容错误：" + err.Error()
 		}
 
 		//处理完整数据
@@ -81,19 +84,28 @@ func (ph packetHandler) inboundHandle(context *context) (int, string) {
 func (ph packetHandler) outboundHandle(context *context) (int, string) {
 
 	conn := context.conn
+	// 发送节点信息进行校验，校验通过在发送报文和文件
+	nodeBytes, errCode, msg := getNodeBytes()
+	if errCode != 0 {
+		return errCode, msg
+	}
+	errCode, msg = sendMessage(nodeBytes, conn, "000", context.transCode)
+	if errCode != 0 {
+		return errCode, msg
+	}
+    // 解決不能正确读取服务端返回业务处理结果的问题，需要其他手段正确解決
+	time.Sleep(1)
+	// 接收响应，正常才进行发送参数信息
+	errCode, msg = headerCheck(context)
+	if errCode != 0 {
+		return errCode, msg
+	}
+
+	// 发送报文
 	message := context.sendBytes
-	if message != nil {
-		// 发送报文
-		pkg, err := packageMessage(context.transCode, mergePercent("001", message))
-		if err != nil {
-			return -1, err.Error()
-		}
-		_, err = conn.Write(pkg.Bytes())
-		if err != nil {
-			log.Printf("交易【%s】报文发送失败>>>>>>>>>>\n", context.transCode)
-			log.Println("报文发送错误信息：", err)
-			return -1, err.Error()
-		}
+	errCode, msg = sendMessage(message, conn, "001", context.transCode)
+	if errCode != 0 {
+		return errCode, msg
 	}
 	// 发送文件
 	files := context.sendFiles
@@ -126,6 +138,69 @@ func (ph packetHandler) outboundHandle(context *context) (int, string) {
 		log.Printf("交易【%s】结束报文发送失败>>>>>>>>>>\n", context.transCode)
 		log.Println("结束报文发送错误信息：", err)
 		return -3, err.Error()
+	}
+
+	return 0, ""
+}
+
+func sendMessage(message []byte, conn net.Conn, percent string, transCode string) (int, string) {
+
+	if message == nil {
+		return -2, "待发送信息为空"
+	}
+
+	// 发送报文
+	pkg, err := packageMessage(transCode, mergePercent(percent, message))
+	if err != nil {
+		return -1, err.Error()
+	}
+
+	_, err = conn.Write(pkg.Bytes())
+	if err != nil {
+		log.Printf("交易【%s】报文发送失败>>>>>>>>>>\n", transCode)
+		log.Println("报文发送错误信息：", err)
+		return -1, err.Error()
+	}
+
+	return 0, ""
+
+}
+
+func getNodeBytes() ([]byte, int, string) {
+	node := Node{
+		Name:       "手机银行",
+		Code:       "FSTS",
+		Encode:     "GBK",
+		Addresses:  Addresses{},
+		Encryption: Encryption{},
+	}
+	nodeBytes, err := xml.Marshal(&node)
+	if err != nil {
+		return nil, -1, err.Error()
+	}
+
+	return nodeBytes, 0, ""
+}
+
+/**
+  通过输入流获取结果
+*/
+func headerCheck(context *context) (int, string) {
+
+	streamProcessor := context.streamProcessor
+	headerHandlers := streamProcessor.headerHandlers
+	headerLen := streamProcessor.headerLen
+	var headerHandler InboundHandler
+	if len(headerHandlers) > 0 {
+		for index:= 0; index < headerLen; index++ {
+			headerHandler = headerHandlers[index]
+			errCode, msg := headerHandler.inboundHandle(context)
+			if errCode != 0 {
+				log.Printf("业务处理器【%s】执行交易【%s】失败>>>>>>>>>\n", headerHandler.getName(), context.transCode)
+				return errCode, msg
+			}
+			log.Printf("节点处理器【%s】执行完成>>>>>>>\n", headerHandler.getName())
+		}
 	}
 
 	return 0, ""
