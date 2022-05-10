@@ -10,12 +10,13 @@ import (
   解決方案：
       1. 采用睡眠1纳秒方案，不太合理。
       2. 需要其他手段正确解決
- */
+*/
 
 func init() {
 	//初始化设置日志格式
-	log.SetFlags(log.Lshortfile |log.Lmicroseconds | log.Ldate)
+	log.SetFlags(log.Lshortfile | log.Lmicroseconds | log.Ldate)
 }
+
 /**
   调用对应服务端进行交易请求
 */
@@ -35,10 +36,10 @@ func SendClient(hzRequest *HzbankRequest, files []string) (*HzbankResponse, []st
 	// 1. 开始校验发送节点和交易是否存在配置中
 
 	// 2. 初始化输入输出执行器
-	streamProcessor, err := createStreamProcessor(2)
+	streamProcessor, err := createStreamProcessor(3)
 	if err != nil {
 		status.ErrorCode = -2
-		status.ErrorMsg = "流处理器初始化失败"
+		status.ErrorMsg = err.Error()
 		return nil, nil, &status
 	}
 
@@ -54,15 +55,22 @@ func SendClient(hzRequest *HzbankRequest, files []string) (*HzbankResponse, []st
 
 	// 初始化发送上下文信息
 	context := context{
-		conn:      conn,
-		nodes:      nil,
+		conn: conn,
+		node: Node{
+			Name:       "手机银行",
+			Code:       "FSTS",
+			Encode:     "GBK",
+			Addresses:  Addresses{},
+			Encryption: Encryption{},
+		},
+		nodes:     nil,
 		transCode: hzRequest.Header.TransCode,
-		message:   hzbankParameter{
+		message: hzbankParameter{
 			request: *hzRequest,
 		},
-        parameter: make(map[string]string),
-		sendFiles: files,
-		percent:   "000",
+		parameter:       make(map[string]string),
+		sendFiles:       files,
+		percent:         "000",
 		streamProcessor: *streamProcessor,
 	}
 
@@ -74,7 +82,7 @@ func SendClient(hzRequest *HzbankRequest, files []string) (*HzbankResponse, []st
 			outboundHandler = outHandlers[index]
 			errCode, msg := outboundHandler.outboundHandle(&context)
 			if errCode != 0 {
-				status.ErrorCode =errCode
+				status.ErrorCode = errCode
 				status.ErrorMsg = msg
 				log.Printf("业务处理器【%s】执行交易【%s】失败>>>>>>>>>\n", outboundHandler.getName(), context.transCode)
 				return nil, nil, &status
@@ -90,7 +98,7 @@ func SendClient(hzRequest *HzbankRequest, files []string) (*HzbankResponse, []st
 			inboundHandler = inHandlers[index]
 			errCode, msg := inboundHandler.inboundHandle(&context)
 			if errCode != 0 {
-				status.ErrorCode =errCode
+				status.ErrorCode = errCode
 				status.ErrorMsg = msg
 				log.Printf("业务处理器【%s】执行交易【%s】失败>>>>>>>>>\n", inboundHandler.getName(), context.transCode)
 				return nil, nil, &status
@@ -98,5 +106,5 @@ func SendClient(hzRequest *HzbankRequest, files []string) (*HzbankResponse, []st
 		}
 	}
 
-    return &context.message.response, context.recvFiles, &status
+	return &context.message.response, context.recvFiles, &status
 }

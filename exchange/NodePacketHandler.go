@@ -12,19 +12,19 @@ import (
   报文解析之前进行节点相关信息校验
  */
 
-type nodeCheckHandler struct {
+type nodePacketHandler struct {
 	name string
 	contentLen int32
 }
 
-func (checkHandler nodeCheckHandler) getName() string {
+func (checkHandler nodePacketHandler) getName() string {
 	return checkHandler.name
 }
 
 /**
   连接交互0阶段，进行节点信息验证
  */
-func (checkHandler nodeCheckHandler) inboundHandle(context *context) (int, string) {
+func (checkHandler nodePacketHandler) inboundHandle(context *context) (int, string) {
 
 	percent := context.percent
 	if percent == "000" {
@@ -73,4 +73,11 @@ func (checkHandler nodeCheckHandler) inboundHandle(context *context) (int, strin
 	}
 
     return 0, ""
+}
+
+/**
+  直接调用公共方法进行使用即可。
+ */
+func (checkHandler nodePacketHandler) outboundHandle(ctx *context) (int, string) {
+	return sendMessage(ctx.nodeBytes, ctx.conn, ctx.percent, ctx.transCode)
 }
