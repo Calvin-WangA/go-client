@@ -3,11 +3,17 @@ package exchange
 import (
 	"encoding/xml"
 	"log"
+	"strconv"
 )
 
 /**
   该文件定义相关系统节点信息
  */
+
+/** 系统级节点信息 */
+var IB2_NODES Nodes
+/** 系统自己节点信息 */
+var NODE_SELF *Node
 
 /**
   地址对象
@@ -54,6 +60,8 @@ type Node struct {
     Addresses Addresses `xml:"addresses"`
     // 加密算法信息
     Encryption Encryption `xml:"encryption"`
+    // 交互协议
+	Protocol string `xml:"protocol"`
 }
 
 /**
@@ -66,21 +74,41 @@ type Nodes struct {
 /**
   解析节点配置文件内容
  */
-func initNodes(path string) (*Nodes, int, string) {
+func initNodes(path string) {
 
 	// 解析文件内容
 	nodeBytes, errCode, msg := readFile(path)
 	if errCode != 0 {
-		return nil, errCode, msg
+		log.Fatalf("配置文件【%s】解析失败代码【%d】，原因【%s】>>>>>>>>>\n", path, errCode, msg)
 	}
-	var nodes Nodes
-	err := xml.Unmarshal(nodeBytes, &nodes)
+	err := xml.Unmarshal(nodeBytes, &IB2_NODES)
 	if err != nil {
-		log.Println("字符串不能解析为对应类：", string(nodeBytes))
-		return nil, -1, err.Error()
+		log.Fatalln("字符串不能解析为对应类：", string(nodeBytes))
 	}
 
 	log.Println("----------节点信息初始化完成----------")
+}
 
-	return &nodes, 0, ""
+/**
+  获取单个节点
+ */
+func getNode(nodeCode string, nodes []Node) *Node {
+	for _, node := range nodes {
+		if nodeCode == node.Code {
+			return &node
+		}
+	}
+
+	return nil
+}
+
+// 可进行负载算法处理
+func getAddress (node Node) string {
+	for _, address := range node.Addresses.Addresses {
+		if address.Port != -1 {
+			return address.Host + ":" + strconv.Itoa(address.Port)
+		}
+	}
+
+	return ""
 }

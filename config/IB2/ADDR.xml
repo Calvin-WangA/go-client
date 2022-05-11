@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes>
+    <node>
+        <name>代销理财系统</name>
+        <code>FSTS</code>
+        <!-- 节点地址 -->
+        <addresses>
+            <address>
+                <host>127.0.0.1</host>
+                <port>8080</port>
+            </address>
+        </addresses>
+        <!-- 使用的加减密算法-->
+        <encryption>
+            <name>sm4</name>
+            <pubKey>111</pubKey>
+            <priKey>222</priKey>
+            <flag>0</flag>
+        </encryption>
+        <!-- 使用的编码格式ss -->
+        <encode>GBK</encode>
+        <!-- 使用的协议 -->
+        <protocol>tcp</protocol>
+    </node>
+    <node>
+        <name>代销理财系统</name>
+        <code>FSTSCLI</code>
+        <!-- 节点地址 -->
+        <addresses>
+            <address>
+                <host>127.0.0.1</host>
+                <port>-1</port>
+            </address>
+        </addresses>
+        <!-- 使用的加减密算法-->
+        <encryption>
+            <name>sm4</name>
+            <pubKey>111</pubKey>
+            <priKey>222</priKey>
+            <flag>0</flag>
+        </encryption>
+        <!-- 使用的编码格式ss -->
+        <encode>GBK</encode>
+        <!-- 使用的协议 -->
+        <protocol>tcp</protocol>
+    </node>
+</nodes>

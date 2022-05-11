@@ -27,7 +27,7 @@ func main() {
 		Body: exchange.RequestBody{ClientNo: "400383444"},
 	}
 	files := []string{"D:\\test\\gotest.txt"}
-	response, _, status := exchange.SendClient(&request, files)
+	response, _, status := exchange.SendClient("FSTS", &request, files)
 	if status.ErrorCode != 0 {
 		log.Printf("交易失败，错误码【%d】，错误信息【%s】\n", status.ErrorCode, status.ErrorMsg)
 	}

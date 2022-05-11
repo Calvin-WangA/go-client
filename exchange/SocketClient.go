@@ -20,7 +20,7 @@ func init() {
 /**
   调用对应服务端进行交易请求
 */
-func SendClient(hzRequest *HzbankRequest, files []string) (*HzbankResponse, []string, *Status) {
+func SendClient(nodeCode string, hzRequest *HzbankRequest, files []string) (*HzbankResponse, []string, *Status) {
 
 	// 初始化返回状态
 	status := Status{
@@ -33,7 +33,13 @@ func SendClient(hzRequest *HzbankRequest, files []string) (*HzbankResponse, []st
 		return nil, nil, &status
 	}
 
-	// 1. 开始校验发送节点和交易是否存在配置中
+	// 1. 开始校验发送节点和交易是否存在配置中, 应用初始化的时候去用，而不是每次调用
+	node := getNode(nodeCode, IB2_NODES.Nodes)
+	if node == nil {
+		status.ErrorCode = -2
+		status.ErrorMsg = "节点"+ nodeCode + "不存在"
+		return nil, nil, &status
+	}
 
 	// 2. 初始化输入输出执行器
 	streamProcessor, err := createStreamProcessor(3)
@@ -44,9 +50,15 @@ func SendClient(hzRequest *HzbankRequest, files []string) (*HzbankResponse, []st
 	}
 
 	// 3. 连接服务端， 根据节点拿到信息并且连接
-	conn, err := net.Dial("tcp", "127.0.0.1:8080")
+	address := getAddress(*node)
+	if address == "" {
+		status.ErrorCode = -2
+		status.ErrorMsg = "无空用地址"
+		return nil, nil, &status
+	}
+	conn, err := net.Dial(node.Protocol, address)
 	if err != nil {
-		log.Printf("服务端【%s】连接失败\n", "127.0.0.1:8080")
+		log.Printf("服务端【%s】连接失败\n", address)
 		log.Println("连接错误信息：", err)
 		status.ErrorCode = -1
 		status.ErrorMsg = "服务器连接失败"
@@ -56,13 +68,7 @@ func SendClient(hzRequest *HzbankRequest, files []string) (*HzbankResponse, []st
 	// 初始化发送上下文信息
 	context := context{
 		conn: conn,
-		node: Node{
-			Name:       "手机银行",
-			Code:       "FSTS",
-			Encode:     "GBK",
-			Addresses:  Addresses{},
-			Encryption: Encryption{},
-		},
+		node: *NODE_SELF,
 		nodes:     nil,
 		transCode: hzRequest.Header.TransCode,
 		message: hzbankParameter{
