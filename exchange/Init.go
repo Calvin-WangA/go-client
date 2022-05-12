@@ -10,12 +10,15 @@ import (
 
 var properties = make(map[string]string)
 
+/**
+  文件路径点为当前路径项目路径
+ */
 func init() {
 	// 读取配置文件
-	readPropertiesScan("G:\\ideaWorkspace\\go-client\\config\\application.properties")
+	readPropertiesScan("./config/application.properties")
 
 	// 初始化节点信息
-	initNodes("G:\\ideaWorkspace\\go-client\\config\\IB2\\ADDR.xml")
+	initNodes("./config/IB2/ADDR.xml")
 	// 赋值当前系统信息
 	NODE_SELF = getNode(properties["node"], IB2_NODES.Nodes)
 	if NODE_SELF == nil {
