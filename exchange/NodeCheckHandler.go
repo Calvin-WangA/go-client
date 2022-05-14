@@ -2,7 +2,6 @@ package exchange
 
 import (
 	"log"
-	"time"
 )
 
 type nodeCheckHandler struct {
@@ -14,6 +13,11 @@ func (nodeCheckHandler nodeCheckHandler) getName() string {
 }
 
 func (nodeCheckHandler nodeCheckHandler) outboundHandle(ctx *context) (int, string) {
+
+	// 非节点校验阶段直接跳过
+	if ctx.percent != "000" {
+		return 0, ""
+	}
 
 	var errCode int
 	var msg  string
@@ -37,9 +41,7 @@ func (nodeCheckHandler nodeCheckHandler) outboundHandle(ctx *context) (int, stri
 	if errCode != 0 {
 		return errCode, msg
 	}
-    // 解決太快导致无法及时接收到服务端正确结果
-    // 临时方案为睡眠，需要确认原因使用最终方案
-	time.Sleep(1)
+
 	inboundHandlers := streamProcessor.nodeInboundHandlers
 	var inboundHandler InboundHandler
 	handlerLen = streamProcessor.nodeInboundLen
