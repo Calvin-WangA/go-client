@@ -15,17 +15,14 @@ import (
 )
 
 func init() {
-	dirPath, err := os.Getwd()
+	/*dirPath, err := os.Getwd()
 	log.Println("Main当前代码路径为：", dirPath)
 	if err != nil {
 		log.Fatalf("获取当前代码路径失败")
-	}
-
-	log.Println("获取的路径为：", GetCurrentDirectory())
-
-	log.Println("获取的路径2为：", getExecutePath2())
-
-	log.Println("获取的路径3为：", getExecutePath4())
+	}*/
+	//log.Println("获取的路径为：", GetCurrentDirectory())
+	//log.Println("获取的路径2为：", getExecutePath2())
+	//log.Println("获取的路径3为：", getExecutePath4())
 }
 
 func GetCurrentDirectory() string {
@@ -88,8 +85,8 @@ func goRequest(waitChannel chan bool) {
 		}
 		files := []string{"D:\\test\\gotest.txt"}
 		response, _, status := exchange.SendClient("FSTS", &request, files)
-		if status.ErrorCode != 0 {
-			log.Printf("交易失败，错误码【%d】，错误信息【%s】\n", status.ErrorCode, status.ErrorMsg)
+		if status.IsFail() {
+			log.Println(status.GetMessage())
 		}
 
 		if response != nil {

@@ -20,49 +20,45 @@ func init() {
 /**
   调用对应服务端进行交易请求
 */
-func SendClient(nodeCode string, hzRequest *HzbankRequest, files []string) (*HzbankResponse, []string, *Status) {
+func SendClient(nodeCode string, hzRequest *HzbankRequest, files []string) (*HzbankResponse, []string, *ExchangeError) {
 
 	// 初始化返回状态
-	status := Status{
-		ErrorCode: 0,
-		ErrorMsg:  "",
-	}
+	var exchangeError ExchangeError
 	if hzRequest == nil {
-		status.ErrorCode = -1
-		status.ErrorMsg = "请求对象不能为空"
-		return nil, nil, &status
+		exchangeError = newExchangeError(300)
+		return nil, nil, &exchangeError
 	}
 
 	// 1. 开始校验发送节点和交易是否存在配置中, 应用初始化的时候去用，而不是每次调用
 	node := getNode(nodeCode, IB2_NODES.Nodes)
 	if node == nil {
-		status.ErrorCode = -2
-		status.ErrorMsg = "节点"+ nodeCode + "不存在"
-		return nil, nil, &status
+        params := []string {nodeCode}
+		exchangeError = newExchangeErrorByParams(301, params)
+		return nil, nil, &exchangeError
 	}
 
 	// 2. 初始化输入输出执行器
 	streamProcessor, err := createStreamProcessor(3)
 	if err != nil {
-		status.ErrorCode = -2
-		status.ErrorMsg = err.Error()
-		return nil, nil, &status
+		params := []string {err.Error()}
+		exchangeError = newExchangeErrorByParams(302, params)
+		exchangeError.ErrorPrintln(err)
+		return nil, nil, &exchangeError
 	}
 
 	// 3. 连接服务端， 根据节点拿到信息并且连接
 	address := getAddress(*node)
 	if address == "" {
-		status.ErrorCode = -2
-		status.ErrorMsg = "无空用地址"
-		return nil, nil, &status
+		params := []string {node.Code}
+		exchangeError = newExchangeErrorByParams(303, params)
+		return nil, nil, &exchangeError
 	}
 	conn, err := net.Dial(node.Protocol, address)
 	if err != nil {
-		log.Printf("服务端【%s】连接失败\n", address)
-		log.Println("连接错误信息：", err)
-		status.ErrorCode = -1
-		status.ErrorMsg = "服务器连接失败"
-		return nil, nil, &status
+		params := []string {address}
+		exchangeError = newExchangeErrorByParams(404, params)
+		exchangeError.ErrorPrintln(err)
+		return nil, nil, &exchangeError
 	}
 
 	// 初始化发送上下文信息
@@ -88,10 +84,10 @@ func SendClient(nodeCode string, hzRequest *HzbankRequest, files []string) (*Hzb
 			outboundHandler = outHandlers[index]
 			errCode, msg := outboundHandler.outboundHandle(&context)
 			if errCode != 0 {
-				status.ErrorCode = errCode
-				status.ErrorMsg = msg
 				log.Printf("业务处理器【%s】执行交易【%s】失败>>>>>>>>>\n", outboundHandler.getName(), context.transCode)
-				return nil, nil, &status
+				exchangeError = newExchangeError(errCode)
+				exchangeError.setMessage(msg)
+				return nil, nil, &exchangeError
 			}
 		}
 	}
@@ -104,13 +100,14 @@ func SendClient(nodeCode string, hzRequest *HzbankRequest, files []string) (*Hzb
 			inboundHandler = inHandlers[index]
 			errCode, msg := inboundHandler.inboundHandle(&context)
 			if errCode != 0 {
-				status.ErrorCode = errCode
-				status.ErrorMsg = msg
 				log.Printf("业务处理器【%s】执行交易【%s】失败>>>>>>>>>\n", inboundHandler.getName(), context.transCode)
-				return nil, nil, &status
+				exchangeError = newExchangeError(errCode)
+				exchangeError.setMessage(msg)
+				return nil, nil, &exchangeError
 			}
 		}
 	}
 
-	return &context.message.response, context.recvFiles, &status
+	exchangeError = newExchangeError(0)
+	return &context.message.response, context.recvFiles, &exchangeError
 }

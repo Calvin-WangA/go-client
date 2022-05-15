@@ -2,13 +2,13 @@ package exchange
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 	"strings"
 )
 
-var properties = make(map[string]string)
+var properties map[string]string
+var errmsgs map[string]string
 
 // 项目对应配置文件路径
 var CONF_PATH string
@@ -23,8 +23,9 @@ func init() {
 
 	initPath()
 	// 读取配置文件
-	readPropertiesScan(CONF_PATH + "/config/application.properties")
-
+	properties = readPropertiesScan(CONF_PATH + "/config/application.properties")
+	// 初始化错误码信息
+	errmsgs  = readPropertiesScan(CONF_PATH + "/config/errmsg.properties")
 	// 初始化节点信息
 	initNodes(CONF_PATH + "/config/IB2/ADDR.xml")
 	// 赋值当前系统信息
@@ -39,7 +40,7 @@ func init() {
  */
 func initPath() {
 	dirPath, err := os.Getwd()
-	log.Println("Main当前代码路径为：", dirPath)
+	log.Println("当前代码路径为：", dirPath)
 	if err != nil {
 		log.Fatalf("获取当前代码路径失败")
 	}
@@ -49,7 +50,7 @@ func initPath() {
 /**
   读取(properties)配置文件
  */
-func readPropertiesScan(path string) {
+func readPropertiesScan(path string)  map[string]string{
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -60,13 +61,16 @@ func readPropertiesScan(path string) {
 	// 使用scan循环读取文件
 	var line string
 	var props []string
+	propMap := make(map[string]string)
 	for scanner.Scan() {
 		line = scanner.Text()
-		fmt.Printf("当前行内容为【%s】\n", line)
 		props = strings.Split(line, "=")
-		properties[props[0]] = props[1]
+		if len(props) > 1 {
+			propMap[props[0]] = props[1]
+		}
 	}
 
 	// 关闭文件
 	defer file.Close()
+	return propMap
 }
