@@ -33,6 +33,8 @@ type ExchangeError struct {
 	errMsg string
 	// 错误信息参数
 	errParameters []string
+	// 返回参数
+	filePath string
 }
 
 func (error ExchangeError) IsSucc() bool {
@@ -53,7 +55,10 @@ func (error ExchangeError) IsFail() bool {
 
 func newExchangeError(errCode int) ExchangeError {
 
-	errMsg := replaceErrMsgParameters(errCode, nil)
+	var errMsg string
+	if errCode != 0 {
+		errMsg = replaceErrMsgParameters(errCode, nil)
+	}
 	return ExchangeError{
 		errCode:       errCode,
 		errMsg:        errMsg,
@@ -63,7 +68,10 @@ func newExchangeError(errCode int) ExchangeError {
 
 func newExchangeErrorByParams(errCode int, errParameters []string) ExchangeError {
 
-	errMsg := replaceErrMsgParameters(errCode, errParameters)
+	var errMsg string
+	if errCode != 0 {
+		errMsg = replaceErrMsgParameters(errCode, errParameters)
+	}
 	return ExchangeError{
 		errCode:       errCode,
 		errMsg:        errMsg,
@@ -73,7 +81,11 @@ func newExchangeErrorByParams(errCode int, errParameters []string) ExchangeError
 
 func (error ExchangeError) ErrorPrintln(err error) {
 	// 打印错误堆栈西悉尼
-	log.Println(GetErrorStackf(err, error.errMsg))
+	if err == nil {
+		log.Println("错误信息：" + error.errMsg)
+	} else {
+		log.Println(GetErrorStackf(err, error.errMsg))
+	}
 }
 
 func (error ExchangeError) setMessage(msg string) {

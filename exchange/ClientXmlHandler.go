@@ -78,15 +78,16 @@ func (xmlHandler exchangeXmlHandler) getName() string {
 /**
   解析文本xml为结构对象
  */
-func (xmlHandler exchangeXmlHandler) inboundHandle(context *context) (int, string) {
+func (xmlHandler exchangeXmlHandler) inboundHandle(context *context) ExchangeError {
 
+	var exchangeError ExchangeError
 	message := context.parameter["recvMessage"]
 	var hzbankResponse HzbankResponse
 	err := xml.Unmarshal([]byte(message), &hzbankResponse)
 	if err != nil {
-		log.Println("字符串不能解析为对应类：", message)
-		log.Println("解析错误信息：", err)
-		return -1, err.Error()
+		exchangeError = newExchangeError(520)
+		exchangeError.ErrorPrintln(err)
+		return exchangeError
 	}
     // 设置交易码
 	context.transCode = hzbankResponse.Header.TransCode
@@ -95,25 +96,30 @@ func (xmlHandler exchangeXmlHandler) inboundHandle(context *context) (int, strin
 		response: hzbankResponse,
 	}
 	context.message = requestParameter
+	exchangeError = newExchangeError(0)
 	log.Println("接收到响应的报文：\n", message)
 
-    return 0, ""
+    return exchangeError
 }
 
 /**
   将结构数据转化为xml文本数据
  */
-func (xmlHandler exchangeXmlHandler) outboundHandle(context *context) (int, string) {
+func (xmlHandler exchangeXmlHandler) outboundHandle(context *context) ExchangeError {
 
+	var exchangeError ExchangeError
 	request := context.message.request
 	requestBytes, err := xml.Marshal(request)
     if err != nil {
-    	log.Printf("报文编码失败：", request)
-    	log.Println("报文编码失败原因：", err)
-    	return -1, err.Error()
+    	params := []string{context.transCode}
+		exchangeError = newExchangeErrorByParams(521, params)
+		exchangeError.ErrorPrintln(err)
+		return exchangeError
 	}
 
 	log.Println("发送的报文内容为：\n", string(requestBytes))
 	context.sendBytes = requestBytes
-	return 0, ""
+	exchangeError = newExchangeError(0)
+
+	return exchangeError
 }

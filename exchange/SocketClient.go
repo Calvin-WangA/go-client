@@ -82,11 +82,9 @@ func SendClient(nodeCode string, hzRequest *HzbankRequest, files []string) (*Hzb
 	if handlerLen > 0 {
 		for index := 0; index < handlerLen; index++ {
 			outboundHandler = outHandlers[index]
-			errCode, msg := outboundHandler.outboundHandle(&context)
-			if errCode != 0 {
+			exchangeError = outboundHandler.outboundHandle(&context)
+			if exchangeError.IsFail() {
 				log.Printf("业务处理器【%s】执行交易【%s】失败>>>>>>>>>\n", outboundHandler.getName(), context.transCode)
-				exchangeError = newExchangeError(errCode)
-				exchangeError.setMessage(msg)
 				return nil, nil, &exchangeError
 			}
 		}
@@ -98,11 +96,9 @@ func SendClient(nodeCode string, hzRequest *HzbankRequest, files []string) (*Hzb
 	if handlerLen > 0 {
 		for index := 0; index < handlerLen; index++ {
 			inboundHandler = inHandlers[index]
-			errCode, msg := inboundHandler.inboundHandle(&context)
-			if errCode != 0 {
+			exchangeError = inboundHandler.inboundHandle(&context)
+			if exchangeError.IsFail() {
 				log.Printf("业务处理器【%s】执行交易【%s】失败>>>>>>>>>\n", inboundHandler.getName(), context.transCode)
-				exchangeError = newExchangeError(errCode)
-				exchangeError.setMessage(msg)
 				return nil, nil, &exchangeError
 			}
 		}

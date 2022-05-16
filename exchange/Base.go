@@ -47,7 +47,7 @@ type InboundHandler interface {
 	getName() string
 
 	// 接收数据处理方法
-	inboundHandle(ctx *context) (int, string)
+	inboundHandle(ctx *context) ExchangeError
 }
 
 type OutboundHandler interface {
@@ -55,29 +55,34 @@ type OutboundHandler interface {
 	// 获取业务处理器名称方法
 	getName() string
 	// 发送数据处理方法
-	outboundHandle(ctx *context) (int, string)
+	outboundHandle(ctx *context) ExchangeError
 }
 
-func sendMessage(message []byte, conn net.Conn, percent string, transCode string) (int, string) {
+func sendMessage(message []byte, conn net.Conn, percent string, transCode string) ExchangeError {
 
+	var exchangeError ExchangeError
 	if message == nil {
-		return -2, "待发送信息为空"
+		exchangeError = newExchangeErrorByParams(510, []string{transCode})
+		exchangeError.ErrorPrintln(nil)
+		return exchangeError
 	}
 
 	// 发送报文
 	pkg, err := packageMessage(transCode, mergePercent(percent, message))
 	if err != nil {
-		return -1, err.Error()
+		exchangeError = newExchangeErrorByParams(511, []string{transCode})
+		exchangeError.ErrorPrintln(err)
+		return exchangeError
 	}
 
 	_, err = conn.Write(pkg.Bytes())
 	if err != nil {
-		log.Printf("交易【%s】报文发送失败>>>>>>>>>>\n", transCode)
-		log.Println("报文发送错误信息：", err)
-		return -1, err.Error()
+		exchangeError = newExchangeErrorByParams(512, []string{transCode})
+		exchangeError.ErrorPrintln(err)
+		return exchangeError
 	}
 
-	return 0, ""
+	return newExchangeError(0)
 
 }
 
@@ -106,14 +111,12 @@ func packageMessage(transCode string, message []byte) (*bytes.Buffer, error) {
 	err := binary.Write(pkg, binary.BigEndian, length)
 	if err != nil {
 		log.Printf("交易【%s】写入数据长度失败\n", transCode)
-		log.Println("写入数据长度错误信息：", err)
 		return nil, err
 	}
 	// 写入数据内容
 	err = binary.Write(pkg, binary.BigEndian, message)
 	if err != nil {
 		log.Printf("交易【%s】写入数据报错>>>>>>>>\n", transCode)
-		log.Println("写入数据错误信息：", err)
 		return nil, err
 	}
 

@@ -12,11 +12,11 @@ func (nodeCheckHandler nodeCheckHandler) getName() string {
 	return nodeCheckHandler.name
 }
 
-func (nodeCheckHandler nodeCheckHandler) outboundHandle(ctx *context) (int, string) {
+func (nodeCheckHandler nodeCheckHandler) outboundHandle(ctx *context) ExchangeError{
 
 	// 非节点校验阶段直接跳过
 	if ctx.percent != "000" {
-		return 0, ""
+		return newExchangeError(0)
 	}
 
 	var errCode int
@@ -26,11 +26,12 @@ func (nodeCheckHandler nodeCheckHandler) outboundHandle(ctx *context) (int, stri
 	outboundHandlers := streamProcessor.nodeOutboundHandlers
 	var outboundHandler OutboundHandler
 	handlerLen := streamProcessor.nodeOutboundLen
+	var exchangeError ExchangeError
 	if handlerLen > 0 {
 		for index := 0; index < handlerLen; index++ {
 			outboundHandler = outboundHandlers[index]
-			errCode, msg  := outboundHandler.outboundHandle(ctx)
-			if errCode != 0 {
+			exchangeError  = outboundHandler.outboundHandle(ctx)
+			if exchangeError.IsFail() {
 				log.Printf("Node业务处理器【%s】报错码【%d】错误信息【%s】\n", outboundHandler.getName(), errCode, msg)
 				// 返回客户端报错信息
 				break
@@ -39,7 +40,7 @@ func (nodeCheckHandler nodeCheckHandler) outboundHandle(ctx *context) (int, stri
 		}
 	}
 	if errCode != 0 {
-		return errCode, msg
+		return exchangeError
 	}
 
 	inboundHandlers := streamProcessor.nodeInboundHandlers
@@ -48,8 +49,8 @@ func (nodeCheckHandler nodeCheckHandler) outboundHandle(ctx *context) (int, stri
 	if handlerLen > 0 {
 		for index := 0; index < handlerLen; index++ {
 			inboundHandler = inboundHandlers[index]
-			errCode, msg = inboundHandler.inboundHandle(ctx)
-			if errCode != 0 {
+			exchangeError = inboundHandler.inboundHandle(ctx)
+			if exchangeError.IsFail() {
 				log.Printf("Node业务处理器【%s】报错码【%d】错误信息【%s】\n", inboundHandler.getName(), errCode, msg)
 				// 返回写入conn，告诉客户端处理报错, 并且直接返回
 				break
@@ -58,10 +59,12 @@ func (nodeCheckHandler nodeCheckHandler) outboundHandle(ctx *context) (int, stri
 		}
 	}
 	if errCode != 0 {
-		return errCode, msg
+		return exchangeError
 	}
 
 	response := ctx.message.response
-	return response.Body.Status.ErrorCode, response.Body.Status.ErrorMsg
+	exchangeError = newExchangeError(response.Body.Status.ErrorCode)
+	exchangeError.setMessage(response.Body.Status.ErrorMsg)
+	return exchangeError
 }
 

@@ -77,9 +77,9 @@ type Nodes struct {
 func initNodes(path string) {
 
 	// 解析文件内容
-	nodeBytes, errCode, msg := readFile(path)
-	if errCode != 0 {
-		log.Fatalf("配置文件【%s】解析失败代码【%d】，原因【%s】>>>>>>>>>\n", path, errCode, msg)
+	nodeBytes, exchangeError := readFile(path)
+	if exchangeError.IsFail() {
+		log.Fatalf("配置文件【%s】解析失败代码>>>>>>>>>\n", path)
 	}
 	err := xml.Unmarshal(nodeBytes, &IB2_NODES)
 	if err != nil {
@@ -111,22 +111,4 @@ func getAddress (node Node) string {
 	}
 
 	return ""
-}
-
-func getNodes(path string) []Node {
-
-	// 解析文件内容
-	nodeBytes, errCode, msg := readFile(path)
-	if errCode != 0 {
-		log.Fatalf("配置文件【%s】解析失败代码【%d】，原因【%s】>>>>>>>>>\n", path, errCode, msg)
-	}
-	var nodes Nodes
-	err := xml.Unmarshal(nodeBytes, &nodes)
-	if err != nil {
-		log.Fatalln("字符串不能解析为对应类：", string(nodeBytes))
-	}
-
-	log.Println("----------节点信息初始化完成----------")
-
-	return nodes.Nodes
 }

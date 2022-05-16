@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 /**
@@ -23,7 +24,7 @@ func CreateFile (path string) (*os.File, error) {
 	// 创建文件
     file, err := os.Create(path)
     if err != nil {
-		log.Printf("文件【%s】创建失败【%s】\n", path)
+		log.Printf("文件【%s】创建失败\n", path)
 		log.Println("文件创建失败原因：", err)
 		return nil, err
 	}
@@ -35,29 +36,39 @@ func CreateFile (path string) (*os.File, error) {
   直接先保存文件，防止文件太多内存占爆
   返回0表示保存成功， 并且返回的内容为报错的文件路径，否则返回错误码和报错信息
 */
-func saveFile(fileBytes []byte) (int, string) {
+func saveFile(transCode string, fileBytes []byte) ExchangeError {
 
 	// 文件路径
-	path := "D:\\test\\ib2\\recv\\test1.txt"
-	file, err := CreateFile(path)
+	filePath := properties["file_path"]
+    filePath = filePath + transCode + time.Now().String()
+	// path := "D:\\test\\ib2\\recv\\test1.txt"
+	var exchangeError ExchangeError
+	file, err := CreateFile(filePath)
 	if err != nil {
-		return -1, err.Error()
+        exchangeError = newExchangeErrorByParams(600, []string{filePath})
+        exchangeError.ErrorPrintln(err)
+		return exchangeError
 	}
 	writer := bufio.NewWriter(file)
 	_, err = writer.Write(fileBytes)
 	if err != nil {
-		log.Printf("文件【%s】保存失败\n", path, err)
-		log.Println("保存失败原因：", err)
-		return -2, err.Error()
+		log.Printf("文件【%s】保存失败\n", filePath)
+		exchangeError = newExchangeErrorByParams(601, []string{filePath})
+		exchangeError.ErrorPrintln(err)
+		return exchangeError
 	}
 
 	err = writer.Flush()
 	if err != nil {
 		log.Println("缓存刷入磁盘失败：", err)
-		return -3, err.Error()
+		exchangeError = newExchangeErrorByParams(602, []string{filePath})
+		exchangeError.ErrorPrintln(err)
+		return exchangeError
 	}
 	// 写完关闭文件
 	defer file.Close()
 
-	return 0, path
+	exchangeError = newExchangeError(0)
+	exchangeError.filePath = filePath
+	return exchangeError
 }

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 )
 
 /**
@@ -25,15 +26,18 @@ func (ph packetHandler) getName() string {
 /**
   接收包处理信息
 */
-func (ph packetHandler) inboundHandle(context *context) (int, string) {
+func (ph packetHandler) inboundHandle(context *context) ExchangeError{
 
 	conn := context.conn
 	reader := bufio.NewReader(conn)
+	var exchangeError ExchangeError
 	for {
 		peek, err := reader.Peek(int(ph.contentLen))
 		if err != nil {
 			log.Println("读取长度错误：", err)
-			return -1, "Peek长度错误：" + err.Error()
+			exchangeError = newExchangeErrorByParams(515, []string{strconv.Itoa(int(ph.contentLen))})
+			exchangeError.ErrorPrintln(err)
+			return exchangeError
 		}
 
 		// 读取长度
@@ -45,7 +49,9 @@ func (ph packetHandler) inboundHandle(context *context) (int, string) {
 				continue
 			} else {
 				log.Println("读取长度出错，错误信息为：", err)
-				return -2, "读取数据长度错误：" + err.Error()
+				exchangeError = newExchangeErrorByParams(516, []string{strconv.Itoa(int(ph.contentLen))})
+				exchangeError.ErrorPrintln(err)
+				return exchangeError
 			}
 		}
 		// 判断是否读完整，否则继续等待
@@ -59,88 +65,98 @@ func (ph packetHandler) inboundHandle(context *context) (int, string) {
 		_, err = reader.Read(data)
 		if err != nil {
 			log.Println("读取数据失败，", err)
-			return -3, "读取数据内容错误：" + err.Error()
+			exchangeError = newExchangeError(517)
+			exchangeError.ErrorPrintln(err)
+			return exchangeError
 		}
 
 		//处理完整数据
-		n, msg := dataHandle(data, context)
-		if n == -1 {
-			return n, msg
+		exchangeError = dataHandle(data, context)
+		if exchangeError.IsFail() {
+			return exchangeError
 		}
-		if n == 100 {
+		if context.percent == strconv.Itoa(100) {
 			break
 		}
 	}
 
-	return 0, ""
+	return exchangeError
 }
 
 /**
   发送包处理信息
 */
-func (ph packetHandler) outboundHandle(context *context) (int, string) {
+func (ph packetHandler) outboundHandle(context *context) ExchangeError {
 
 	conn := context.conn
 	// 发送报文
 	message := context.sendBytes
-	errCode, msg := sendMessage(message, conn, "001", context.transCode)
-	if errCode != 0 {
-		return errCode, msg
+	exchangeError := sendMessage(message, conn, "001", context.transCode)
+	if exchangeError.IsFail() {
+		return exchangeError
 	}
 	// 发送文件
 	files := context.sendFiles
 	if len(files) > 0 {
 		for _, file := range files {
-			fileBytes, errCode, msg := readFile(file)
-			if errCode != 0 {
-				return errCode, msg
+			fileBytes, exchangeError := readFile(file)
+			if exchangeError.IsFail() {
+				return exchangeError
 			}
 			// 发送报文
 			pkg, err := packageMessage(context.transCode, mergePercent("099", fileBytes))
 			if err != nil {
-				return -2, err.Error()
+				exchangeError = newExchangeErrorByParams(511, []string{context.transCode})
+				exchangeError.ErrorPrintln(err)
+				return exchangeError
 			}
 			_, err = conn.Write(pkg.Bytes())
 			if err != nil {
-				log.Printf("交易【%s】报文发送失败>>>>>>>>>>\n", context.transCode)
-				log.Println("文件发送错误信息：", err)
-				return -2, err.Error()
+				exchangeError = newExchangeErrorByParams(512, []string{context.transCode})
+				exchangeError.ErrorPrintln(err)
+				return exchangeError
 			}
 		}
 	}
 	// 发送结束标志
 	pkg, err := packageMessage(context.transCode, mergePercent("100", make([]byte, 0)))
 	if err != nil {
-		return -3, err.Error()
+		exchangeError = newExchangeErrorByParams(511, []string{context.transCode})
+		exchangeError.ErrorPrintln(err)
+		return exchangeError
 	}
 	_, err = conn.Write(pkg.Bytes())
 	if err != nil {
-		log.Printf("交易【%s】结束报文发送失败>>>>>>>>>>\n", context.transCode)
-		log.Println("结束报文发送错误信息：", err)
-		return -3, err.Error()
+		exchangeError = newExchangeErrorByParams(512, []string{context.transCode})
+		exchangeError.ErrorPrintln(err)
+		return exchangeError
 	}
 
-	return 0, ""
+	return newExchangeError(0)
 }
 
 
 /***
   处理发送过来的数据
 */
-func dataHandle(data []byte, context *context) (int, string) {
+func dataHandle(data []byte, context *context) ExchangeError {
 	// 阶段标志
 	percent := string(data[4:7])
 	dataLen := len(data)
+	var params = []string{context.transCode}
+	var exchangeError = newExchangeError(0)
 	if percent == "001" {
 		// 数据内容
 		if dataLen <= 7 {
-			return -2, "接收报文无内容"
+			exchangeError = newExchangeErrorByParams(512, params)
+			exchangeError.ErrorPrintln(nil)
+			return exchangeError
 		}
 		message := string(data[7:])
 		context.parameter["recvMessage"] = message
 		context.percent = percent
 		log.Println("接收到的报文：\n", message)
-		return 1, ""
+		return exchangeError
 	} else if percent == "099" {
 		// 保存到文件，文件可以是空文件
 		context.percent = percent
@@ -150,34 +166,38 @@ func dataHandle(data []byte, context *context) (int, string) {
 		} else {
 			fileData = data[7:]
 		}
-		errCode, msg := saveFile(fileData)
-		if errCode != 0 {
-			return errCode, msg
+		exchangeError := saveFile(context.transCode, fileData)
+		if exchangeError.IsFail() {
+			return exchangeError
 		}
 		fileIndex := len(context.recvFiles) - 1
-		context.recvFiles[fileIndex] = msg
-		return 99, ""
+		context.recvFiles[fileIndex] = exchangeError.filePath
+		return exchangeError
 	} else if percent == "100" {
 		// 消息接收完成，跳出循环
 		context.percent = percent
-		return 100, ""
+		return exchangeError
 	}
 
+	exchangeError = newExchangeErrorByParams(514, []string {context.transCode, percent})
+	exchangeError.ErrorPrintln(nil)
 	log.Printf("未失败的发送阶段【%s】\n", percent)
-	return -1, "未识辨的发送阶段错误信息"
+	return exchangeError
 }
 
 /**
   直接读文本，再转化为字节
   后期可优化为直接读取字节，少一道中转，效率更高
 */
-func readFile(path string) ([]byte, int, string) {
+func readFile(path string) ([]byte, ExchangeError) {
 
+	var exchangeError ExchangeError
 	file, err := os.Open(path)
 	if err != nil {
+		exchangeError = newExchangeErrorByParams(603, []string{path})
+		exchangeError.ErrorPrintln(err)
 		log.Printf("文件【%s】打开失败\n", path)
-		log.Println("文件打开错误信息：", err)
-		return nil, -1, err.Error()
+		return nil, exchangeError
 	}
 
 	// 读取文件
@@ -191,8 +211,9 @@ func readFile(path string) ([]byte, int, string) {
 				break
 			} else {
 				log.Printf("文件【%s】内容读取失败, 错误信息\n", path)
-				log.Println("内如读取错误信息：", err)
-				return nil, -2, err.Error()
+				exchangeError = newExchangeErrorByParams(604, []string{path})
+				exchangeError.ErrorPrintln(err)
+				return nil, exchangeError
 			}
 		}
 		// 合并字节信息
@@ -206,5 +227,5 @@ func readFile(path string) ([]byte, int, string) {
 
 	}
 
-	return fileBytes, 0, ""
+	return fileBytes, newExchangeError(0)
 }

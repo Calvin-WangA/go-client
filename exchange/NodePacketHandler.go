@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"io"
 	"log"
+	"strconv"
 )
 
 /**
@@ -24,16 +25,18 @@ func (checkHandler nodePacketHandler) getName() string {
 /**
   连接交互0阶段，进行节点信息验证
 */
-func (checkHandler nodePacketHandler) inboundHandle(context *context) (int, string) {
+func (checkHandler nodePacketHandler) inboundHandle(context *context) ExchangeError {
 
 	conn := context.conn
 	reader := bufio.NewReader(conn)
+	var exchangeError ExchangeError
 	for {
 		peek, err := reader.Peek(int(checkHandler.contentLen))
 		if err != nil {
 			log.Printf("输入处理器【%s】读取长度错误>>>>>>>>>>>\n", checkHandler.getName())
-			log.Println("错误信息：", err)
-			return -1, err.Error()
+			exchangeError = newExchangeErrorByParams(515, []string{strconv.Itoa(int(checkHandler.contentLen))})
+			exchangeError.ErrorPrintln(err)
+			return exchangeError
 		}
 
 		buffer := bytes.NewBuffer(peek)
@@ -44,8 +47,9 @@ func (checkHandler nodePacketHandler) inboundHandle(context *context) (int, stri
 				continue
 			} else {
 				log.Printf("输入处理器【%s】读取长度数据出错>>>>>>>>>>>>\n", checkHandler.getName())
-				log.Println("错误信息：", err)
-				return -2, err.Error()
+				exchangeError = newExchangeErrorByParams(516, []string{strconv.Itoa(int(checkHandler.contentLen))})
+				exchangeError.ErrorPrintln(err)
+				return exchangeError
 			}
 		}
 
@@ -57,8 +61,9 @@ func (checkHandler nodePacketHandler) inboundHandle(context *context) (int, stri
 		_, err = reader.Read(data)
 		if err != nil {
 			log.Printf("输入处理器【%s】读取数据内容失败>>>>>>>>>>>>\n", checkHandler.getName())
-			log.Println("错误信息：", err)
-			return -3, err.Error()
+			exchangeError = newExchangeError(517)
+			exchangeError.ErrorPrintln(err)
+			return exchangeError
 		}
 
 		// 数据封装
@@ -66,7 +71,7 @@ func (checkHandler nodePacketHandler) inboundHandle(context *context) (int, stri
 		break
 	}
 
-	return 0, ""
+	return newExchangeError(0)
 }
 
 func nodePacketHandle(data []byte, context *context) {
@@ -81,6 +86,6 @@ func nodePacketHandle(data []byte, context *context) {
 /**
   直接调用公共方法进行使用即可。
 */
-func (checkHandler nodePacketHandler) outboundHandle(ctx *context) (int, string) {
+func (checkHandler nodePacketHandler) outboundHandle(ctx *context) ExchangeError {
 	return sendMessage(ctx.nodeBytes, ctx.conn, ctx.percent, ctx.transCode)
 }
