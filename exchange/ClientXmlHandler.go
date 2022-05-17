@@ -86,7 +86,7 @@ func (xmlHandler exchangeXmlHandler) inboundHandle(context *context) ExchangeErr
 	err := xml.Unmarshal([]byte(message), &hzbankResponse)
 	if err != nil {
 		exchangeError = newExchangeError(520)
-		exchangeError.ErrorPrintln(err)
+		log.Println(GetErrorStackf(err, exchangeError.errMsg))
 		return exchangeError
 	}
     // 设置交易码
@@ -113,7 +113,7 @@ func (xmlHandler exchangeXmlHandler) outboundHandle(context *context) ExchangeEr
     if err != nil {
     	params := []string{context.transCode}
 		exchangeError = newExchangeErrorByParams(521, params)
-		exchangeError.ErrorPrintln(err)
+		log.Println(GetErrorStackf(err, exchangeError.errMsg))
 		return exchangeError
 	}
 

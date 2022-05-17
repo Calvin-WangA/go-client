@@ -42,7 +42,7 @@ func SendClient(nodeCode string, hzRequest *HzbankRequest, files []string) (*Hzb
 	if err != nil {
 		params := []string {err.Error()}
 		exchangeError = newExchangeErrorByParams(302, params)
-		exchangeError.ErrorPrintln(err)
+		log.Println(GetErrorStackf(err, exchangeError.errMsg))
 		return nil, nil, &exchangeError
 	}
 
@@ -57,7 +57,7 @@ func SendClient(nodeCode string, hzRequest *HzbankRequest, files []string) (*Hzb
 	if err != nil {
 		params := []string {address}
 		exchangeError = newExchangeErrorByParams(404, params)
-		exchangeError.ErrorPrintln(err)
+		log.Println(GetErrorStackf(err, exchangeError.errMsg))
 		return nil, nil, &exchangeError
 	}
 

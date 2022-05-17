@@ -60,17 +60,17 @@ func getExecutePath4() string {
 func main() {
 
 	waitChannel := make(chan bool)
-	for index := 0; index < 5; index++ {
+	for index := 0; index < 1; index++ {
 		go goRequest(waitChannel)
 	}
 
-	for index := 0; index < 5; index++ {
+	for index := 0; index < 1; index++ {
 		<-waitChannel
 	}
 }
 
 func goRequest(waitChannel chan bool) {
-	for index := 0; index < 5000; index++ {
+	for index := 0; index < 1; index++ {
 		request := exchange.HzbankRequest{
 			XMLName: xml.Name{
 				Space: "",
