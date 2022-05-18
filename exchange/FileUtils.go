@@ -47,7 +47,7 @@ func saveFile(transCode string, fileBytes []byte) ExchangeError {
 	file, err := CreateFile(filePath)
 	if err != nil {
         exchangeError = newExchangeErrorByParams(600, []string{filePath})
-		log.Println(GetErrorStackf(err, exchangeError.errMsg))
+		log.Println(GetErrorStack(err, exchangeError.errMsg))
 		return exchangeError
 	}
 	writer := bufio.NewWriter(file)
@@ -55,7 +55,7 @@ func saveFile(transCode string, fileBytes []byte) ExchangeError {
 	if err != nil {
 		log.Printf("文件【%s】保存失败\n", filePath)
 		exchangeError = newExchangeErrorByParams(601, []string{filePath})
-		log.Println(GetErrorStackf(err, exchangeError.errMsg))
+		log.Println(GetErrorStack(err, exchangeError.errMsg))
 		return exchangeError
 	}
 
@@ -63,7 +63,7 @@ func saveFile(transCode string, fileBytes []byte) ExchangeError {
 	if err != nil {
 		log.Println("缓存刷入磁盘失败：", err)
 		exchangeError = newExchangeErrorByParams(602, []string{filePath})
-		log.Println(GetErrorStackf(err, exchangeError.errMsg))
+		log.Println(GetErrorStack(err, exchangeError.errMsg))
 		return exchangeError
 	}
 	// 写完关闭文件

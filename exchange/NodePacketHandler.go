@@ -35,7 +35,7 @@ func (checkHandler nodePacketHandler) inboundHandle(context *context) ExchangeEr
 		if err != nil {
 			log.Printf("输入处理器【%s】读取长度错误>>>>>>>>>>>\n", checkHandler.getName())
 			exchangeError = newExchangeErrorByParams(515, []string{strconv.Itoa(int(checkHandler.contentLen))})
-			log.Println(GetErrorStackf(err, exchangeError.errMsg))
+			log.Println(GetErrorStack(err, exchangeError.errMsg))
 			return exchangeError
 		}
 
@@ -48,7 +48,7 @@ func (checkHandler nodePacketHandler) inboundHandle(context *context) ExchangeEr
 			} else {
 				log.Printf("输入处理器【%s】读取长度数据出错>>>>>>>>>>>>\n", checkHandler.getName())
 				exchangeError = newExchangeErrorByParams(516, []string{strconv.Itoa(int(checkHandler.contentLen))})
-				log.Println(GetErrorStackf(err, exchangeError.errMsg))
+				log.Println(GetErrorStack(err, exchangeError.errMsg))
 				return exchangeError
 			}
 		}
@@ -62,7 +62,7 @@ func (checkHandler nodePacketHandler) inboundHandle(context *context) ExchangeEr
 		if err != nil {
 			log.Printf("输入处理器【%s】读取数据内容失败>>>>>>>>>>>>\n", checkHandler.getName())
 			exchangeError = newExchangeError(517)
-			log.Println(GetErrorStackf(err, exchangeError.errMsg))
+			log.Println(GetErrorStack(err, exchangeError.errMsg))
 			return exchangeError
 		}
 

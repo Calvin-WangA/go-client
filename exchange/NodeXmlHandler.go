@@ -28,7 +28,7 @@ func (xmlHandler nodeXmlHandler) inboundHandle(context *context) ExchangeError {
 	if err != nil {
 		log.Println("字符串不能解析为对应类：", message)
 		exchangeError := newExchangeError(520)
-		log.Println(GetErrorStackf(err, exchangeError.errMsg))
+		log.Println(GetErrorStack(err, exchangeError.errMsg))
 		return exchangeError
 	}
 
@@ -50,7 +50,7 @@ func (xmlHandler nodeXmlHandler) outboundHandle(context *context) ExchangeError 
 		log.Println("报文编码失败：", node)
 		params := []string{context.transCode}
 		exchangeError := newExchangeErrorByParams(521, params)
-		log.Println(GetErrorStackf(err, exchangeError.errMsg))
+		log.Println(GetErrorStack(err, exchangeError.errMsg))
 		return exchangeError
 	}
 

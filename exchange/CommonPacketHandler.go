@@ -36,7 +36,7 @@ func (ph packetHandler) inboundHandle(context *context) ExchangeError{
 		if err != nil {
 			log.Println("读取长度错误：", err)
 			exchangeError = newExchangeErrorByParams(515, []string{strconv.Itoa(int(ph.contentLen))})
-			log.Println(GetErrorStackf(err, exchangeError.errMsg))
+			log.Println(GetErrorStack(err, exchangeError.errMsg))
 			return exchangeError
 		}
 
@@ -50,7 +50,7 @@ func (ph packetHandler) inboundHandle(context *context) ExchangeError{
 			} else {
 				log.Println("读取长度出错，错误信息为：", err)
 				exchangeError = newExchangeErrorByParams(516, []string{strconv.Itoa(int(ph.contentLen))})
-				log.Println(GetErrorStackf(err, exchangeError.errMsg))
+				log.Println(GetErrorStack(err, exchangeError.errMsg))
 				return exchangeError
 			}
 		}
@@ -66,7 +66,7 @@ func (ph packetHandler) inboundHandle(context *context) ExchangeError{
 		if err != nil {
 			log.Println("读取数据失败，", err)
 			exchangeError = newExchangeError(517)
-			log.Println(GetErrorStackf(err, exchangeError.errMsg))
+			log.Println(GetErrorStack(err, exchangeError.errMsg))
 			return exchangeError
 		}
 
@@ -107,13 +107,13 @@ func (ph packetHandler) outboundHandle(context *context) ExchangeError {
 			pkg, err := packageMessage(context.transCode, mergePercent("099", fileBytes))
 			if err != nil {
 				exchangeError = newExchangeErrorByParams(511, []string{context.transCode})
-				log.Println(GetErrorStackf(err, exchangeError.errMsg))
+				log.Println(GetErrorStack(err, exchangeError.errMsg))
 				return exchangeError
 			}
 			_, err = conn.Write(pkg.Bytes())
 			if err != nil {
 				exchangeError = newExchangeErrorByParams(512, []string{context.transCode})
-				log.Println(GetErrorStackf(err, exchangeError.errMsg))
+				log.Println(GetErrorStack(err, exchangeError.errMsg))
 				return exchangeError
 			}
 		}
@@ -122,13 +122,13 @@ func (ph packetHandler) outboundHandle(context *context) ExchangeError {
 	pkg, err := packageMessage(context.transCode, mergePercent("100", make([]byte, 0)))
 	if err != nil {
 		exchangeError = newExchangeErrorByParams(511, []string{context.transCode})
-		log.Println(GetErrorStackf(err, exchangeError.errMsg))
+		log.Println(GetErrorStack(err, exchangeError.errMsg))
 		return exchangeError
 	}
 	_, err = conn.Write(pkg.Bytes())
 	if err != nil {
 		exchangeError = newExchangeErrorByParams(512, []string{context.transCode})
-		log.Println(GetErrorStackf(err, exchangeError.errMsg))
+		log.Println(GetErrorStack(err, exchangeError.errMsg))
 		return exchangeError
 	}
 
@@ -195,7 +195,7 @@ func readFile(path string) ([]byte, ExchangeError) {
 	file, err := os.Open(path)
 	if err != nil {
 		exchangeError = newExchangeErrorByParams(603, []string{path})
-		log.Println(GetErrorStackf(err, exchangeError.errMsg))
+		log.Println(GetErrorStack(err, exchangeError.errMsg))
 		log.Printf("文件【%s】打开失败\n", path)
 		return nil, exchangeError
 	}
@@ -212,7 +212,7 @@ func readFile(path string) ([]byte, ExchangeError) {
 			} else {
 				log.Printf("文件【%s】内容读取失败, 错误信息\n", path)
 				exchangeError = newExchangeErrorByParams(604, []string{path})
-				log.Println(GetErrorStackf(err, exchangeError.errMsg))
+				log.Println(GetErrorStack(err, exchangeError.errMsg))
 				return nil, exchangeError
 			}
 		}
